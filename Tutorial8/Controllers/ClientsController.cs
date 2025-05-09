@@ -27,14 +27,17 @@ public class ClientsController : ControllerBase
     
     [HttpPost]
     public async Task<IActionResult> CreateClient([FromBody] ClientDTO clientDto)
-    {
+    {   
+        //input validation
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
         
         var clientId = await _clientsService.CreateClient(clientDto);
+        
+        //return id of the created client
         return CreatedAtAction(nameof(GetClientTrips), new { clientId }, new { clientId });
     }
-    
+    //assigns client to trip
     [HttpPut("{id}/trips/{tripId}")]
     public async Task<IActionResult> AddClientToTrip(int id, int tripId)
     {
@@ -46,10 +49,10 @@ public class ClientsController : ControllerBase
             AssignClientToTripResult.AlreadyAssigned => BadRequest("Client already assigned to this trip"),
             AssignClientToTripResult.TripFull => BadRequest($"Trip with id: {tripId} is full"),
             AssignClientToTripResult.Success => Created(),
-            _ => StatusCode(500)
+            _ => StatusCode(500) 
         };
     }
-    
+    //removes client from trip
     [HttpDelete("{id}/trips/{tripId}")]
     public async Task<IActionResult> DeleteClientTripAssignment(int id, int tripId)
     {

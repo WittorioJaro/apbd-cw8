@@ -6,10 +6,12 @@ namespace Tutorial8.Services;
 public class ClientsService : IClientsService
 {
     private readonly string _connectionString = "Server=localhost,1433;Database=master;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;";
-
+    
+    //get all trips from client
     public async Task<List<ClientTripDTO>> GetClientTrips(int clientId)
     {
         var clientTrips = new List<ClientTripDTO>();
+        //trips for client with countries and registration/payment info
         string command = @"
         SELECT t.*, c.Name as CountryName, ct.RegisteredAt, ct.PaymentDate 
         FROM Trip t
@@ -38,6 +40,8 @@ public class ClientsService : IClientsService
                 while (await reader.ReadAsync())
                 {
                     var tripId = reader.GetInt32(idTripOrdinal);
+                    // Check if this trip is already in the result list
+                    // Multiple countries = duplicate trip entries
                     var existingTrip = clientTrips.FirstOrDefault(ct => ct.Trip.Id == tripId);
                     
                     if (existingTrip == null)
@@ -71,6 +75,7 @@ public class ClientsService : IClientsService
                     }
                     else if (!reader.IsDBNull(countryNameOrdinal))
                     {
+                        // Add additional country if trip already exists in the list
                         existingTrip.Trip.Countries.Add(new CountryDTO
                         {
                             Name = reader.GetString(countryNameOrdinal)
@@ -98,7 +103,8 @@ public class ClientsService : IClientsService
     }
 
     public async Task<int> CreateClient(ClientDTO clientDto)
-    {
+    {   
+        //Insert new client and return the generated IdClient.
         string command = @"INSERT INTO Client (FirstName, LastName, Email, Telephone, Pesel)
           OUTPUT INSERTED.IdClient
           VALUES (@FirstName, @LastName, @Email, @Telephone, @Pesel)";
@@ -119,7 +125,8 @@ public class ClientsService : IClientsService
     }
 
     public async Task<bool> DeleteAssignment(int clientId, int tripId)
-    {
+    {   
+        //Delete the assignment from Client_Trip table.
         string command = @"DELETE FROM Client_Trip WHERE IdClient = @ClientId AND IdTrip = @TripId";
         using (SqlConnection conn = new SqlConnection(_connectionString))
             using (SqlCommand cmd = new SqlCommand(command, conn))
@@ -139,14 +146,15 @@ public class ClientsService : IClientsService
             return AssignClientToTripResult.ClientNotFound;
         
         int? maxPeople = null;
-        string maxCommand = @"SELECT MaxPeople FROM Trip WHERE IdTrip = @TripId";
-        string checkAssign = @"SELECT 1 FROM Client_Trip WHERE IdClient = @ClientId AND IdTrip = @TripId";
-        string checkFull = @"SELECT COUNT(*) FROM Client_Trip WHERE IdTrip = @TripId";
+        string maxCommand = @"SELECT MaxPeople FROM Trip WHERE IdTrip = @TripId"; //get max people for trip
+        string checkAssign = @"SELECT 1 FROM Client_Trip WHERE IdClient = @ClientId AND IdTrip = @TripId"; //check if client is already assigned
+        string checkFull = @"SELECT COUNT(*) FROM Client_Trip WHERE IdTrip = @TripId"; //check if trip is full
         string assignCommand = @"INSERT INTO Client_Trip (IdClient, IdTrip, RegisteredAt) 
-            VALUES (@ClientId, @TripId, @Now)";
+            VALUES (@ClientId, @TripId, @Now)"; //assign client to trip
         using (SqlConnection conn = new SqlConnection(_connectionString))
         {
             await conn.OpenAsync();
+            // Check if trip exists and get max capacity
             using (SqlCommand cmd = new SqlCommand(maxCommand, conn))
             {
                 cmd.Parameters.AddWithValue("@TripId", tripId);
@@ -155,6 +163,7 @@ public class ClientsService : IClientsService
                     return AssignClientToTripResult.TripNotFound;
                 maxPeople = (int)result;
             }
+            // Check if client is already assigned to the trip
             using (SqlCommand cmd = new SqlCommand(checkAssign, conn))
             {
                 cmd.Parameters.AddWithValue("@ClientId", clientId);
@@ -163,6 +172,7 @@ public class ClientsService : IClientsService
                 if (alreadyAssigned != null)
                     return AssignClientToTripResult.AlreadyAssigned;
             }
+            // Check if trip is full
             using (SqlCommand cmd = new SqlCommand(checkFull, conn))
             {
                 cmd.Parameters.AddWithValue("@TripId", tripId);
@@ -170,6 +180,7 @@ public class ClientsService : IClientsService
                 if (count != null && (int)count >= maxPeople)
                     return AssignClientToTripResult.TripFull;
             }
+            // Assign client to trip
             using (SqlCommand cmd = new SqlCommand(assignCommand, conn))
             {
                 cmd.Parameters.AddWithValue("@ClientId", clientId);

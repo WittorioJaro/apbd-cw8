@@ -10,13 +10,14 @@ public class TripsService : ITripsService
     public async Task<List<TripDTO>> GetTrips()
     {
         var trips = new List<TripDTO>();
-
+        
+        // Get all trips with countries
         string command = @"
         SELECT t.*, c.Name as CountryName 
         FROM Trip t
         LEFT JOIN Country_Trip ct ON t.IdTrip = ct.IdTrip
         LEFT JOIN Country c ON ct.IdCountry = c.IdCountry";
-
+        
 
         
         using (SqlConnection conn = new SqlConnection(_connectionString))
@@ -33,7 +34,8 @@ public class TripsService : ITripsService
                 while (await reader.ReadAsync())
                 {
                     var tripId = reader.GetInt32(idTripOrdinal);
-
+                    
+                    
                     trips.Add(new TripDTO()
                     {
                         Id = tripId,
@@ -44,6 +46,8 @@ public class TripsService : ITripsService
                         MaxPeople = reader.GetInt32(max),
                         Countries = new List<CountryDTO>()
                     });
+                    
+                    // Add country to the trip's country list
                     foreach (var trip in trips)
                     {
                         if (trip.Id == tripId)
