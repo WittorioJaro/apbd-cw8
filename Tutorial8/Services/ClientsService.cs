@@ -117,6 +117,20 @@ public class ClientsService : IClientsService
             return (int) newId;
         }
     }
+
+    public async Task<bool> DeleteAssignment(int clientId, int tripId)
+    {
+        string command = @"DELETE FROM Client_Trip WHERE IdClient = @ClientId AND IdTrip = @TripId";
+        using (SqlConnection conn = new SqlConnection(_connectionString))
+            using (SqlCommand cmd = new SqlCommand(command, conn))
+            {
+                cmd.Parameters.AddWithValue("@ClientId", clientId);
+                cmd.Parameters.AddWithValue("@TripId", tripId);
+                await conn.OpenAsync();
+                var result = await cmd.ExecuteNonQueryAsync();
+                return result > 0;
+            }
+    }
     
 
     public async Task<AssignClientToTripResult> AssignClientToTrip(int clientId, int tripId)
@@ -165,7 +179,6 @@ public class ClientsService : IClientsService
                 return AssignClientToTripResult.Success;
             }
         }
-
     }
 
 }

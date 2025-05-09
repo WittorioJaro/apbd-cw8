@@ -8,4 +8,5 @@ public interface IClientsService
     Task<bool> ClientExists(int clientId);
     Task<int> CreateClient(ClientDTO clientDto);
     Task<AssignClientToTripResult> AssignClientToTrip(int clientId, int tripId);
+    Task<bool> DeleteAssignment(int clientId, int tripId);
 }

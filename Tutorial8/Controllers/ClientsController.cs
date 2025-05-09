@@ -48,6 +48,14 @@ public class ClientsController : ControllerBase
             AssignClientToTripResult.Success => Created(),
             _ => StatusCode(500)
         };
-
+    }
+    
+    [HttpDelete("{id}/trips/{tripId}")]
+    public async Task<IActionResult> DeleteClientTripAssignment(int id, int tripId)
+    {
+        var deleted = await _clientsService.DeleteAssignment(id, tripId);
+        if (!deleted)
+            return NotFound("Assignment not found");
+        return NoContent();
     }
 }
