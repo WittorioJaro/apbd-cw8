@@ -11,7 +11,13 @@ public class TripsService : ITripsService
     {
         var trips = new List<TripDTO>();
 
-        string command = "SELECT IdTrip, Name FROM Trip";
+        string command = @"
+        SELECT t.*, c.Name as CountryName 
+        FROM Trip t
+        LEFT JOIN Country_Trip ct ON t.IdTrip = ct.IdTrip
+        LEFT JOIN Country c ON ct.IdCountry = c.IdCountry";
+
+
         
         using (SqlConnection conn = new SqlConnection(_connectionString))
         using (SqlCommand cmd = new SqlCommand(command, conn))
@@ -20,15 +26,37 @@ public class TripsService : ITripsService
 
             using (var reader = await cmd.ExecuteReaderAsync())
             {
+                int idTripOrdinal = reader.GetOrdinal("IdTrip");
+                int max = reader.GetOrdinal("MaxPeople");
+                int countryNameOrdinal = reader.GetOrdinal("CountryName");
+
                 while (await reader.ReadAsync())
                 {
-                    int idOrdinal = reader.GetOrdinal("IdTrip");
+                    var tripId = reader.GetInt32(idTripOrdinal);
+
                     trips.Add(new TripDTO()
                     {
-                        Id = reader.GetInt32(idOrdinal),
+                        Id = tripId,
                         Name = reader.GetString(1),
+                        Description = reader.GetString(2),
+                        DateFrom = reader.GetDateTime(3),
+                        DateTo = reader.GetDateTime(4),
+                        MaxPeople = reader.GetInt32(max),
+                        Countries = new List<CountryDTO>()
                     });
+                    foreach (var trip in trips)
+                    {
+                        if (trip.Id == tripId)
+                        {
+                            var countryName = reader.GetString(countryNameOrdinal);
+                            trip.Countries.Add(new CountryDTO()
+                            {
+                                Name = countryName
+                            });
+                        }
+                    }
                 }
+                    
             }
         }
         
